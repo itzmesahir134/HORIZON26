@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useSpring, animated } from '@react-spring/web';
+
 import { animate as anime } from 'animejs';
 import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import { COLOURS, DIFFICULTY } from '../constants';
@@ -30,10 +30,11 @@ function ColorTray({ availableColours, onSelect }) {
 }
 
 // ── Guess Row ────────────────────────────────────────────────────────────────
-function GuessRow({ rowIndex, isActive, isPast, slots, guessData, feedback, onSlotClick, activeSlotIndex }) {
+function GuessRow({ rowIndex, isActive, isPast, slots, guessData, feedback, onSlotClick, activeSlotIndex, isFirst }) {
   return (
     <div
       className={`row-${rowIndex} flex items-center gap-4 px-4 py-6 border-b border-gray-800/40 transition-all duration-200 overflow-visible
+        ${isFirst ? 'mt-8' : ''}
         ${isActive ? 'bg-[#0f1720] border-l-[3px] border-l-[#8eff71]' : ''}
         ${isPast   ? 'opacity-75' : ''}
         ${!isActive && !isPast ? 'opacity-20' : ''}
@@ -83,9 +84,6 @@ export default function GameBoard({ difficulty, secret, guesses, feedbacks, curr
   }, [guesses.length]);
 
   const isSubmitReady = currentGuess.every(c => c !== null);
-
-  // Submit button spring
-  const [{ scale }, btnApi] = useSpring(() => ({ scale: 1 }));
 
   // Click a slot → just activate it
   const handleSlotClick = (index) => setActiveSlotIndex(index);
@@ -140,11 +138,12 @@ export default function GameBoard({ difficulty, secret, guesses, feedbacks, curr
         </div>
 
         {/* Rows */}
-        <div className="flex-1 overflow-y-auto flex flex-col px-5 pb-5 pt-12 gap-5">
+        <div className="flex-1 overflow-y-auto flex flex-col px-5 pb-5 pt-12 gap-5 scroll-pt-12">
           {allRows.map((row, i) => (
             <GuessRow
               key={i}
               rowIndex={i}
+              isFirst={i === 0}
               isActive={row.type === 'active'}
               isPast={row.type === 'past'}
               slots={config.slots}
@@ -208,32 +207,18 @@ export default function GameBoard({ difficulty, secret, guesses, feedbacks, curr
         </div>
 
         {/* Submit */}
-        <animated.button
-          style={{ scale }}
-          onMouseDown={() => btnApi.start({ scale: 0.96 })}
-          onMouseUp={()   => btnApi.start({ scale: 1 })}
-          onMouseLeave={() => btnApi.start({ scale: 1 })}
-          onClick={() => {
-            if (isSubmitReady) {
-              onSubmitGuess();
-            } else {
-              anime({ targets: `.row-${guesses.length}`, translateX: [0, -8, 8, -6, 6, -3, 3, 0], duration: 380 });
-            }
-          }}
+        <button
+          onClick={isSubmitReady ? onSubmitGuess : () => anime({ targets: `.row-${guesses.length}`, translateX: [0, -8, 8, -6, 6, -3, 3, 0], duration: 380 })}
           className={`
-            w-full py-4 font-display text-sm tracking-[0.25em] uppercase font-bold transition-all duration-200
+            w-full py-4 font-display text-sm tracking-[0.25em] uppercase font-bold transition-all duration-200 active:scale-[0.98]
             ${isSubmitReady
-              ? 'bg-[#8eff71] text-[#0a3d00] cursor-pointer hover:brightness-110'
+              ? 'bg-[#8eff71] text-[#0a3d00] shadow-[0_0_20px_rgba(142,255,113,0.4)] cursor-pointer hover:brightness-110'
               : 'bg-transparent text-gray-700 border-2 border-gray-800 cursor-not-allowed'
             }
           `}
-          style={{
-            scale,
-            boxShadow: isSubmitReady ? '0 0 20px rgba(142,255,113,0.4)' : 'none',
-          }}
         >
           {isSubmitReady ? '▶ CHECK PATTERN' : 'Fill all slots first'}
-        </animated.button>
+        </button>
 
       </div>
     </div>
