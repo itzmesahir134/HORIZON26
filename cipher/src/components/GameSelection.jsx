@@ -221,7 +221,7 @@ function DifficultyCard({ mode, config, meta, onClick, enterDelay }) {
 }
 
 // ── Difficulty screen ─────────────────────────────────────────────────────────
-export default function DifficultyScreen({ onSelect, onViewLeaderboard }) {
+export default function GameSelection({ onSelect, onViewLeaderboard }) {
   const containerRef = useRef(null);
   useScreenEntrance(containerRef);
 

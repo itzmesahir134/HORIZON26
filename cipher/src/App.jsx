@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { COLOURS, DIFFICULTY } from './constants';
 import { computeFeedback } from './utils/computeFeedback';
-import DifficultyScreen from './components/DifficultyScreen';
+import GameSelection from './components/GameSelection';
+import LandingScreen from './components/LandingScreen';
 import GameBoard from './components/GameBoard';
 import TimerArc from './components/TimerArc';
 import WinScreen from './components/WinScreen';
@@ -67,7 +68,7 @@ function HudHeader({ screen, totalTime, onTimeout }) {
         >
           PROJECT CIPHER        </h1>
         <div className="mt-3 font-hud text-base text-gray-400 tracking-widest font-medium uppercase">
-          {screen !== 'difficulty' && 'Pattern guessing active'}
+          {screen !== 'gameSelection' && 'Pattern guessing active'}
         </div>
       </div>
 
@@ -80,7 +81,7 @@ function HudHeader({ screen, totalTime, onTimeout }) {
 
 export default function App() {
   const [gameState, setGameState] = useState({
-    screen: 'difficulty',
+    screen: 'landing',
     difficulty: 'easy',
     secret: [],
     guesses: [],
@@ -155,6 +156,10 @@ export default function App() {
     setGameState(prev => ({ ...prev, screen: 'lost' }));
   };
 
+  if (gameState.screen === 'landing') {
+    return <LandingScreen onStart={() => setGameState(prev => ({ ...prev, screen: 'gameSelection' }))} />;
+  }
+
   return (
     <div className="flex-1 w-full flex flex-col items-center min-h-screen relative overflow-x-hidden bg-[#080a0f]">
       {/* ── Layer 1: Full-screen Background ── */}
@@ -197,8 +202,8 @@ export default function App() {
           {/* Screen router */}
           <main className="flex-1 flex flex-col justify-center w-full px-4 md:px-8 lg:px-12 pb-12 pt-6">
             <div className="flex-1 overflow-hidden relative">
-              {gameState.screen === 'difficulty' && (
-                <DifficultyScreen 
+              {gameState.screen === 'gameSelection' && (
+                <GameSelection 
                   onSelect={handleDifficultySelect} 
                   onViewLeaderboard={() => setGameState(prev => ({ ...prev, screen: 'leaderboard' }))}
                 />
@@ -219,7 +224,7 @@ export default function App() {
               {gameState.screen === 'won' && (
                 <WinScreen
                   gameState={gameState}
-                  onPlayAgain={() => setGameState(prev => ({ ...prev, screen: 'difficulty' }))}
+                  onPlayAgain={() => setGameState(prev => ({ ...prev, screen: 'gameSelection' }))}
                   onSaveScore={(name) => {
                     saveScore(gameState.difficulty, name, gameState.guesses.length, gameState.timeTaken);
                     setGameState(prev => ({ ...prev, screen: 'leaderboard' }));
@@ -229,14 +234,14 @@ export default function App() {
 
               {gameState.screen === 'leaderboard' && (
                 <Leaderboard 
-                  onBack={() => setGameState(prev => ({ ...prev, screen: 'difficulty' }))}
+                  onBack={() => setGameState(prev => ({ ...prev, screen: 'gameSelection' }))}
                 />
               )}
 
               {gameState.screen === 'lost' && (
                 <LossScreen
                   gameState={gameState}
-                  onPlayAgain={() => setGameState(prev => ({ ...prev, screen: 'difficulty' }))}
+                  onPlayAgain={() => setGameState(prev => ({ ...prev, screen: 'gameSelection' }))}
                 />
               )}
             </div>
