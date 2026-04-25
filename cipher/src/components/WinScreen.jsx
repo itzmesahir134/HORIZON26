@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTrail, animated, useSpring } from '@react-spring/web';
 import gsap from 'gsap';
 import { COLOURS, DIFFICULTY } from '../constants';
-import { playSuccess } from '../utils/audio';
+import { playSuccess, playActionClick, playActionHover } from '../utils/audio';
 
 // ── Performance rating based on difficulty & guesses used ────────────────────
 function getRating(difficulty, guessCount) {
@@ -81,6 +81,7 @@ export default function WinScreen({ gameState, onPlayAgain, onSaveScore }) {
   const handleSave = (e) => {
     e.preventDefault();
     if (!name || saved) return;
+    playActionClick();
     setSaved(true);
     onSaveScore(name);
   };
@@ -167,6 +168,7 @@ export default function WinScreen({ gameState, onPlayAgain, onSaveScore }) {
               <button
                 type="submit"
                 disabled={!name}
+                onMouseEnter={playActionHover}
                 className="px-5 py-3 font-display text-xs tracking-widest uppercase bg-[#8eff71] text-[#0a3d00] font-bold hover:bg-[#9fff85] active:scale-[0.98] transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 SAVE
@@ -182,7 +184,11 @@ export default function WinScreen({ gameState, onPlayAgain, onSaveScore }) {
         {/* ── 4. Play Again CTA ── */}
         <div ref={buttonsRef} className="w-full">
           <button
-            onClick={onPlayAgain}
+            onClick={() => {
+              playActionClick();
+              onPlayAgain();
+            }}
+            onMouseEnter={playActionHover}
             className="w-full py-4 font-display text-sm tracking-[0.25em] uppercase text-[#8eff71] border-2 border-[#8eff71]/40 hover:bg-[#8eff71]/10 hover:border-[#8eff71] hover:shadow-[0_0_20px_rgba(142,255,113,0.3)] active:scale-[0.98] transition-all duration-200"
           >
             ▶ PLAY AGAIN

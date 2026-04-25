@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import { getScores } from '../utils/leaderboardStore';
 import { DIFFICULTY } from '../constants';
-import { playClick, playHover } from '../utils/audio';
+import { playActionClick, playMenuHover, playMenuClick } from '../utils/audio';
 
 // ── Tab config ───────────────────────────────────────────────────────────────
 const TABS = [
@@ -112,8 +112,8 @@ export default function Leaderboard({ onBack }) {
             return (
               <button
                 key={t.key}
-                onMouseEnter={playHover}
-                onClick={() => { playClick(); handleTabChange(t.key); }}
+                onMouseEnter={playMenuHover}
+                onClick={() => { playMenuClick(); handleTabChange(t.key); }}
                 className="flex-1 py-3 font-display text-xs tracking-[0.25em] uppercase transition-all duration-200 relative"
                 style={{
                   color:      isActive ? t.accent : '#4b5563',
@@ -176,14 +176,14 @@ export default function Leaderboard({ onBack }) {
         {/* ── Back button ── */}
         <div className="mt-6 pb-4">
           <button
-            onClick={() => { playClick(); onBack(); }}
+            onClick={() => { playActionClick(); onBack(); }}
             className="w-full py-4 font-display text-xs tracking-[0.3em] uppercase border-2 transition-all duration-200"
             style={{
               color:        tab.accent,
               borderColor:  `${tab.accent}40`,
             }}
             onMouseEnter={e => {
-              playHover();
+              playMenuHover();
               e.currentTarget.style.background    = `${tab.accent}10`;
               e.currentTarget.style.borderColor   = tab.accent;
               e.currentTarget.style.boxShadow     = `0 0 18px ${tab.glow}`;

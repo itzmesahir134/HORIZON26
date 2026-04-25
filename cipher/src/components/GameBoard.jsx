@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { animate as anime } from 'animejs';
 import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import { COLOURS, DIFFICULTY } from '../constants';
-import { playClick, playHover } from '../utils/audio';
+import { playPegClick, playPegHover, playActionClick, playSoftError } from '../utils/audio';
 import ColourSlot from './ColourSlot';
 import PegDisplay from './PegDisplay';
 
@@ -16,10 +16,10 @@ function ColorTray({ availableColours, onSelect }) {
           <button
             key={c.id}
             onClick={() => {
-              playClick();
+              playPegClick();
               onSelect(c.id);
             }}
-            onMouseEnter={playHover}
+            onMouseEnter={playPegHover}
             className="w-10 h-10 md:w-12 md:h-12 rounded-full transition-all duration-150 active:scale-90 hover:scale-110"
             style={{
               backgroundColor: c.hex,
@@ -58,7 +58,12 @@ function GuessRow({ rowIndex, isActive, isPast, slots, guessData, feedback, onSl
             colorId={guessData ? guessData[slotIndex] : null}
             isSelected={isActive && activeSlotIndex === slotIndex}
             disabled={!isActive}
-            onClick={() => onSlotClick(slotIndex)}
+            onClick={() => {
+              if (isActive && onSlotClick) {
+                playPegClick();
+                onSlotClick(slotIndex);
+              }
+            }}
           />
         ))}
       </div>
@@ -216,10 +221,10 @@ export default function GameBoard({ difficulty, secret, guesses, feedbacks, curr
         <button
           onClick={() => {
             if (isSubmitReady) {
-              playClick();
+              playActionClick();
               onSubmitGuess();
             } else {
-              playHover(); // Soft error sound
+              playSoftError();
               anime({ targets: `.row-${guesses.length}`, translateX: [0, -8, 8, -6, 6, -3, 3, 0], duration: 380 });
             }
           }}

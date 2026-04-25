@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import { DIFFICULTY, COLOURS } from '../constants';
-import { playClick, playHover, playStart } from '../utils/audio';
+import { playMenuClick, playMenuHover, playStart, playActionHover, playActionClick } from '../utils/audio';
 
 // ── Card metadata ────────────────────────────────────────────────────────────
 const CARD_META = {
@@ -64,7 +64,7 @@ function DifficultyCard({ mode, config, meta, onClick, enterDelay }) {
     config: { tension: 380, friction: 22 },
   }));
 
-  const handleEnter = () => { playHover(); setHovered(true);  api.start({ y: -12, scale: baseScale + 0.025, shadow: 1 }); };
+  const handleEnter = () => { playMenuHover(); setHovered(true);  api.start({ y: -12, scale: baseScale + 0.025, shadow: 1 }); };
   const handleLeave = () => { setHovered(false); api.start({ y: 0,   scale: baseScale,          shadow: meta.recommended ? 0.4 : 0 }); };
   const handleDown  = () => api.start({ scale: baseScale - 0.03 });
   const handleUp    = () => api.start({ scale: hovered ? baseScale + 0.025 : baseScale });
@@ -85,8 +85,8 @@ function DifficultyCard({ mode, config, meta, onClick, enterDelay }) {
       onMouseLeave={handleLeave}
       onMouseDown={handleDown}
       onMouseUp={handleUp}
-      onKeyDown={e => e.key === 'Enter' && (playClick(), onClick())}
-      onClick={() => { playClick(); onClick(); }}
+      onKeyDown={e => e.key === 'Enter' && (playMenuClick(), onClick())}
+      onClick={() => { playMenuClick(); onClick(); }}
       style={{
         y,
         scale,
@@ -286,8 +286,8 @@ export default function DifficultyScreen({ onSelect, onViewLeaderboard }) {
 
         {/* View High Scores */}
         <button
-          onClick={onViewLeaderboard}
-          onMouseEnter={() => setLbHovered(true)}
+          onClick={() => { playActionClick(); onViewLeaderboard(); }}
+          onMouseEnter={() => { setLbHovered(true); playActionHover(); }}
           onMouseLeave={() => setLbHovered(false)}
           className="font-display text-sm tracking-[0.3em] font-bold uppercase px-12 py-4 transition-all duration-200 active:scale-95"
           style={{

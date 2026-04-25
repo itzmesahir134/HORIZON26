@@ -8,6 +8,7 @@ import WinScreen from './components/WinScreen';
 import LossScreen from './components/LossScreen';
 import Leaderboard from './components/Leaderboard';
 import { saveScore } from './utils/leaderboardStore';
+import { toggleSoundtrack, playActionClick, playActionHover } from './utils/audio';
 
 // ── HUD status bar data ──────────────────────────────────────────────────────
 const TICKER_ITEMS = [
@@ -90,6 +91,15 @@ export default function App() {
     startTime: null,
     timeTaken: 0,
   });
+
+  // ── Soundtrack Management ────────────────────────────────────────────────
+  useEffect(() => {
+    if (gameState.screen === 'playing') {
+      toggleSoundtrack(true);
+    } else if (gameState.screen === 'win' || gameState.screen === 'loss') {
+      toggleSoundtrack(false);
+    }
+  }, [gameState.screen]);
 
   const handleDifficultySelect = (mode, secret) => {
     setGameState(prev => ({

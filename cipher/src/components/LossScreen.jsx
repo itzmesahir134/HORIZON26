@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTrail, animated, useSpring } from '@react-spring/web';
 import gsap from 'gsap';
 import { COLOURS } from '../constants';
-import { playError } from '../utils/audio';
+import { playError, playActionClick, playActionHover } from '../utils/audio';
 
 export default function LossScreen({ gameState, onPlayAgain }) {
   const overlayRef  = useRef(null);
@@ -107,8 +107,8 @@ export default function LossScreen({ gameState, onPlayAgain }) {
         {/* ── 3. CTA ── */}
         <div ref={buttonsRef} className="w-full">
           <button
-            onClick={onPlayAgain}
-            onMouseEnter={() => setBtnHovered(true)}
+            onClick={() => { playActionClick(); onPlayAgain(); }}
+            onMouseEnter={() => { setBtnHovered(true); playActionHover(); }}
             onMouseLeave={() => setBtnHovered(false)}
             className="w-full py-4 font-display text-sm tracking-[0.3em] uppercase border-2 transition-all duration-200 active:scale-[0.97]"
             style={{
