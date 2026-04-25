@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import { DIFFICULTY, COLOURS } from '../constants';
+import { playClick, playHover, playStart } from '../utils/audio';
 
 // ── Card metadata ────────────────────────────────────────────────────────────
 const CARD_META = {
@@ -63,7 +64,7 @@ function DifficultyCard({ mode, config, meta, onClick, enterDelay }) {
     config: { tension: 380, friction: 22 },
   }));
 
-  const handleEnter = () => { setHovered(true);  api.start({ y: -12, scale: baseScale + 0.025, shadow: 1 }); };
+  const handleEnter = () => { playHover(); setHovered(true);  api.start({ y: -12, scale: baseScale + 0.025, shadow: 1 }); };
   const handleLeave = () => { setHovered(false); api.start({ y: 0,   scale: baseScale,          shadow: meta.recommended ? 0.4 : 0 }); };
   const handleDown  = () => api.start({ scale: baseScale - 0.03 });
   const handleUp    = () => api.start({ scale: hovered ? baseScale + 0.025 : baseScale });
@@ -84,8 +85,8 @@ function DifficultyCard({ mode, config, meta, onClick, enterDelay }) {
       onMouseLeave={handleLeave}
       onMouseDown={handleDown}
       onMouseUp={handleUp}
-      onKeyDown={e => e.key === 'Enter' && onClick()}
-      onClick={onClick}
+      onKeyDown={e => e.key === 'Enter' && (playClick(), onClick())}
+      onClick={() => { playClick(); onClick(); }}
       style={{
         y,
         scale,
@@ -227,6 +228,7 @@ export default function DifficultyScreen({ onSelect, onViewLeaderboard }) {
   const [lbHovered, setLbHovered] = useState(false);
 
   const handleSelect = (mode) => {
+    playStart();
     const config          = DIFFICULTY[mode];
     const availableColours = COLOURS.slice(0, config.numColours);
     const secret = Array.from({ length: config.slots }, () =>
@@ -240,6 +242,7 @@ export default function DifficultyScreen({ onSelect, onViewLeaderboard }) {
     const handleKeyDown = (e) => {
       // Only trigger if not typing in an input (defense in depth)
       if (e.key === 'Enter' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        playStart();
         handleSelect('medium');
       }
     };

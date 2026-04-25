@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { animate as anime } from 'animejs';
 import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import { COLOURS, DIFFICULTY } from '../constants';
+import { playClick, playHover } from '../utils/audio';
 import ColourSlot from './ColourSlot';
 import PegDisplay from './PegDisplay';
 
@@ -14,7 +15,11 @@ function ColorTray({ availableColours, onSelect }) {
         return (
           <button
             key={c.id}
-            onClick={() => onSelect(c.id)}
+            onClick={() => {
+              playClick();
+              onSelect(c.id);
+            }}
+            onMouseEnter={playHover}
             className="w-10 h-10 md:w-12 md:h-12 rounded-full transition-all duration-150 active:scale-90 hover:scale-110"
             style={{
               backgroundColor: c.hex,
@@ -46,7 +51,7 @@ function GuessRow({ rowIndex, isActive, isPast, slots, guessData, feedback, onSl
       </span>
 
       {/* Colour slots */}
-      <div className="flex gap-2 md:gap-3 flex-1 justify-center">
+      <div className="flex gap-2 md:gap-3 flex-1 justify-center items-center">
         {Array.from({ length: slots }).map((_, slotIndex) => (
           <ColourSlot
             key={slotIndex}
@@ -138,7 +143,8 @@ export default function GameBoard({ difficulty, secret, guesses, feedbacks, curr
         </div>
 
         {/* Rows */}
-        <div className="flex-1 overflow-y-auto flex flex-col px-5 pb-5 pt-12 gap-5 scroll-pt-12">
+        <div className="flex-1 overflow-y-auto flex flex-col px-5 pb-5 pt-8 gap-5 scroll-pt-12">
+          <div className="h-4 shrink-0 w-full" aria-hidden="true" />
           {allRows.map((row, i) => (
             <GuessRow
               key={i}
@@ -208,7 +214,15 @@ export default function GameBoard({ difficulty, secret, guesses, feedbacks, curr
 
         {/* Submit */}
         <button
-          onClick={isSubmitReady ? onSubmitGuess : () => anime({ targets: `.row-${guesses.length}`, translateX: [0, -8, 8, -6, 6, -3, 3, 0], duration: 380 })}
+          onClick={() => {
+            if (isSubmitReady) {
+              playClick();
+              onSubmitGuess();
+            } else {
+              playHover(); // Soft error sound
+              anime({ targets: `.row-${guesses.length}`, translateX: [0, -8, 8, -6, 6, -3, 3, 0], duration: 380 });
+            }
+          }}
           className={`
             w-full py-4 font-display text-sm tracking-[0.25em] uppercase font-bold transition-all duration-200 active:scale-[0.98]
             ${isSubmitReady

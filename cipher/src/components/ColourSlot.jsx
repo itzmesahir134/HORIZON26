@@ -21,7 +21,7 @@ export default function ColourSlot({ colorId, isSelected, onClick, disabled }) {
         cursor: disabled ? 'default' : 'pointer',
       }}
       className={`
-        w-10 h-10 md:w-12 md:h-12 rounded-full
+        w-10 h-10 md:w-12 md:h-12 rounded-full shrink-0
         flex items-center justify-center m-1
         transition-all duration-100 ease-out
         ${!bgHex ? 'border-2 border-gray-700' : ''}

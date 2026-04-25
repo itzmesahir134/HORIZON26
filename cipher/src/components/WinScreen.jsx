@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTrail, animated, useSpring } from '@react-spring/web';
 import gsap from 'gsap';
 import { COLOURS, DIFFICULTY } from '../constants';
+import { playSuccess } from '../utils/audio';
 
 // ── Performance rating based on difficulty & guesses used ────────────────────
 function getRating(difficulty, guessCount) {
@@ -25,8 +26,8 @@ export default function WinScreen({ gameState, onPlayAgain, onSaveScore }) {
 
   // ── Title glow-pulse spring ──────────────────────────────────────────────
   const [glowStyle] = useSpring(() => ({
-    from: { textShadow: '0 0 15px rgba(142,255,113,0.4)' },
-    to:   { textShadow: '0 0 50px rgba(142,255,113,0.85)' },
+    from: { textShadow: '0 0 15px rgba(142,255,113,0.4)', transform: 'scale(1)' },
+    to:   { textShadow: '0 0 50px rgba(142,255,113,0.85)', transform: 'scale(1.03)' },
     loop: { reverse: true },
     config: { duration: 1200 },
   }));
@@ -35,6 +36,8 @@ export default function WinScreen({ gameState, onPlayAgain, onSaveScore }) {
   useEffect(() => {
     const container = overlayRef.current;
     if (!container) return;
+
+    playSuccess();
 
     // Confetti
     for (let i = 0; i < 60; i++) {
@@ -123,16 +126,32 @@ export default function WinScreen({ gameState, onPlayAgain, onSaveScore }) {
         </div>
 
         {/* ── 3. Stats + Save form ── */}
-        <div ref={statsRef} className="w-full bg-[#0a0d14]/90 border border-gray-800 p-6 flex flex-col gap-5">
+        <div ref={statsRef} className="w-full bg-[#0a0d14]/90 border border-[#8eff71]/20 p-6 flex flex-col gap-6 relative shadow-[0_0_30px_rgba(142,255,113,0.05)]">
+          {/* Cyberpunk corner accents */}
+          <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-[#8eff71]/60" />
+          <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-[#8eff71]/60" />
 
-          {/* Score line */}
-          <p className="font-hud text-sm text-center tracking-widest text-gray-400 uppercase">
-            Solved in{' '}
-            <span className="text-white font-bold">{gameState.guesses.length}</span>{' '}
-            {gameState.guesses.length === 1 ? 'move' : 'moves'}
-            <span className="text-gray-600"> · </span>
-            <span style={{ color: rating.color }}>{rating.label}</span>
-          </p>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 gap-y-5 gap-x-4 border-b border-gray-800/60 pb-5">
+            <div className="flex flex-col gap-1">
+              <span className="font-display text-[10px] text-gray-500 tracking-widest uppercase">Difficulty</span>
+              <span className="font-hud text-sm text-gray-300 uppercase tracking-widest">{gameState.difficulty}</span>
+            </div>
+            <div className="flex flex-col gap-1 text-right">
+              <span className="font-display text-[10px] text-gray-500 tracking-widest uppercase">Rating</span>
+              <span className="font-hud text-sm uppercase tracking-widest" style={{ color: rating.color }}>{rating.label}</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="font-display text-[10px] text-gray-500 tracking-widest uppercase">Moves Used</span>
+              <span className="font-hud text-sm text-[#8eff71] font-bold uppercase tracking-widest">
+                {gameState.guesses.length} <span className="text-gray-600 text-xs font-normal">/ {DIFFICULTY[gameState.difficulty].maxGuesses}</span>
+              </span>
+            </div>
+            <div className="flex flex-col gap-1 text-right">
+              <span className="font-display text-[10px] text-gray-500 tracking-widest uppercase">Time</span>
+              <span className="font-hud text-sm text-[#8eff71] font-bold uppercase tracking-widest">{gameState.timeTaken?.toFixed(1)}s</span>
+            </div>
+          </div>
 
           {/* Name input + save */}
           {!saved ? (
@@ -140,7 +159,7 @@ export default function WinScreen({ gameState, onPlayAgain, onSaveScore }) {
               <input
                 type="text"
                 maxLength={15}
-                placeholder="Enter your name"
+                placeholder="ENTER PILOT NAME"
                 value={name}
                 onChange={e => setName(e.target.value.toUpperCase())}
                 className="flex-1 bg-[#0d1117] border border-gray-700 focus:border-[#8eff71] text-center font-hud text-sm tracking-widest text-white outline-none px-3 py-3 uppercase transition-colors duration-200"
@@ -148,14 +167,14 @@ export default function WinScreen({ gameState, onPlayAgain, onSaveScore }) {
               <button
                 type="submit"
                 disabled={!name}
-                className="px-5 py-3 font-display text-xs tracking-widest uppercase bg-[#8eff71] text-[#0a3d00] font-bold hover:brightness-110 active:scale-95 transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="px-5 py-3 font-display text-xs tracking-widest uppercase bg-[#8eff71] text-[#0a3d00] font-bold hover:bg-[#9fff85] active:scale-[0.98] transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 SAVE
               </button>
             </form>
           ) : (
-            <p className="text-center font-display text-xs tracking-widest text-[#8eff71] uppercase">
-              ✓ Score saved — good luck beating it!
+            <p className="text-center font-display text-xs tracking-widest text-[#8eff71] uppercase py-3 border border-[#8eff71]/20 bg-[#8eff71]/5">
+              ✓ SCORE SAVED TO NETWORK
             </p>
           )}
         </div>

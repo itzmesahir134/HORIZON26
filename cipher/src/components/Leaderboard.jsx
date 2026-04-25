@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import { getScores } from '../utils/leaderboardStore';
 import { DIFFICULTY } from '../constants';
+import { playClick, playHover } from '../utils/audio';
 
 // ── Tab config ───────────────────────────────────────────────────────────────
 const TABS = [
@@ -111,7 +112,8 @@ export default function Leaderboard({ onBack }) {
             return (
               <button
                 key={t.key}
-                onClick={() => handleTabChange(t.key)}
+                onMouseEnter={playHover}
+                onClick={() => { playClick(); handleTabChange(t.key); }}
                 className="flex-1 py-3 font-display text-xs tracking-[0.25em] uppercase transition-all duration-200 relative"
                 style={{
                   color:      isActive ? t.accent : '#4b5563',
@@ -131,27 +133,31 @@ export default function Leaderboard({ onBack }) {
           })}
         </div>
 
-        {/* ── Table ── */}
-        <div className="flex-1 bg-[#080a0f] border-x border-b border-gray-800">
+        {/* ── Table Container ── */}
+        <div className="flex-1 bg-[#0a0d14]/90 border border-gray-800 shadow-[0_0_30px_rgba(0,0,0,0.5)] relative">
+          
+          {/* Cyberpunk corner accents */}
+          <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2" style={{ borderColor: `${tab.accent}60` }} />
+          <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2" style={{ borderColor: `${tab.accent}60` }} />
 
           {/* Column headers */}
-          <div className="flex items-center px-5 py-2 border-b border-gray-800 bg-[#0a0d14]">
+          <div className="flex items-center px-5 py-3 border-b border-gray-800/80 bg-[#0d1117]/50">
             <div className="w-10 shrink-0" />
-            <div className="flex-1 pl-3 font-display text-[9px] tracking-[0.3em] text-gray-600 uppercase">Name</div>
-            <div className="w-16 text-right font-display text-[9px] tracking-[0.3em] text-gray-600 uppercase shrink-0">Moves</div>
-            <div className="w-20 text-right font-display text-[9px] tracking-[0.3em] text-gray-600 uppercase shrink-0 pl-2">Time</div>
+            <div className="flex-1 pl-3 font-display text-[9px] tracking-[0.3em] text-gray-500 uppercase">Pilot</div>
+            <div className="w-16 text-right font-display text-[9px] tracking-[0.3em] text-gray-500 uppercase shrink-0">Moves</div>
+            <div className="w-20 text-right font-display text-[9px] tracking-[0.3em] text-gray-500 uppercase shrink-0 pl-2">Time</div>
           </div>
 
           {/* Rows */}
           <div className="flex flex-col min-h-[280px]">
             {scores.length === 0 ? (
               <div className="flex flex-col items-center justify-center flex-1 gap-3 py-16 text-center">
-                <div className="font-display text-2xl text-gray-700">—</div>
-                <p className="font-hud text-xs tracking-widest text-gray-600 uppercase">
-                  No records yet
+                <div className="font-display text-2xl" style={{ color: `${tab.accent}40` }}>—</div>
+                <p className="font-hud text-xs tracking-widest text-gray-500 uppercase">
+                  NO NETWORK RECORDS FOUND
                 </p>
-                <p className="font-hud text-[10px] text-gray-700 tracking-widest mt-1">
-                  Play a game to set a score
+                <p className="font-display text-[10px] text-gray-600 tracking-[0.2em] mt-1 uppercase">
+                  Complete a sequence to establish ranking
                 </p>
               </div>
             ) : (
@@ -170,13 +176,14 @@ export default function Leaderboard({ onBack }) {
         {/* ── Back button ── */}
         <div className="mt-6 pb-4">
           <button
-            onClick={onBack}
+            onClick={() => { playClick(); onBack(); }}
             className="w-full py-4 font-display text-xs tracking-[0.3em] uppercase border-2 transition-all duration-200"
             style={{
               color:        tab.accent,
               borderColor:  `${tab.accent}40`,
             }}
             onMouseEnter={e => {
+              playHover();
               e.currentTarget.style.background    = `${tab.accent}10`;
               e.currentTarget.style.borderColor   = tab.accent;
               e.currentTarget.style.boxShadow     = `0 0 18px ${tab.glow}`;

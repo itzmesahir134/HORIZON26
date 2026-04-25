@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTrail, animated, useSpring } from '@react-spring/web';
 import gsap from 'gsap';
 import { COLOURS } from '../constants';
+import { playError } from '../utils/audio';
 
 export default function LossScreen({ gameState, onPlayAgain }) {
   const overlayRef  = useRef(null);
@@ -20,6 +21,7 @@ export default function LossScreen({ gameState, onPlayAgain }) {
 
   // ── GSAP entrance + title shake ──────────────────────────────────────────
   useEffect(() => {
+    playError();
     const tl = gsap.timeline();
     tl.fromTo(overlayRef.current, { opacity: 0 }, { opacity: 1, duration: 0.35 })
       .fromTo(
