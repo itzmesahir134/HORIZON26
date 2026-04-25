@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { COLOURS, DIFFICULTY } from './constants';
 import { computeFeedback } from './utils/computeFeedback';
 import DifficultyScreen from './components/DifficultyScreen';
@@ -8,7 +8,7 @@ import WinScreen from './components/WinScreen';
 import LossScreen from './components/LossScreen';
 import Leaderboard from './components/Leaderboard';
 import { saveScore } from './utils/leaderboardStore';
-import { toggleSoundtrack, playActionClick, playActionHover } from './utils/audio';
+import { toggleSoundtrack } from './utils/audio';
 
 // ── HUD status bar data ──────────────────────────────────────────────────────
 const TICKER_ITEMS = [
