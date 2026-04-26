@@ -75,7 +75,7 @@ function GuessRow({ rowIndex, isActive, isPast, slots, guessData, feedback, onSl
 }
 
 // ── Game Board ───────────────────────────────────────────────────────────────
-export default function GameBoard({ difficulty, secret, guesses, feedbacks, currentGuess, onUpdateGuess, onSubmitGuess }) {
+export default function GameBoard({ difficulty, guesses, feedbacks, currentGuess, onUpdateGuess, onSubmitGuess }) {
   const containerRef = useRef(null);
   useScreenEntrance(containerRef);
 
@@ -87,10 +87,12 @@ export default function GameBoard({ difficulty, secret, guesses, feedbacks, curr
   // Synchronous shadow of currentGuess to handle rapid clicks flawlessly
   const localGuessRef = useRef([...currentGuess]);
 
-  // Reset active slot and local shadow when row changes (next guess)
+  // Reset active slot and local shadow when a new guess row starts
   useEffect(() => {
     localGuessRef.current = [...currentGuess];
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveSlotIndex(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guesses.length]);
 
   const isSubmitReady = currentGuess.every(c => c !== null);
@@ -115,12 +117,6 @@ export default function GameBoard({ difficulty, secret, guesses, feedbacks, curr
     });
   };
 
-  // Clear a slot on double-click / right-click
-  const handleSlotClear = (index) => {
-    localGuessRef.current[index] = null;
-    onUpdateGuess([...localGuessRef.current]);
-    setActiveSlotIndex(index);
-  };
 
 
   // Build row data

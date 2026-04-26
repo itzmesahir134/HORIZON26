@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import { DIFFICULTY, COLOURS } from '../constants';
@@ -221,21 +221,21 @@ function DifficultyCard({ mode, config, meta, onClick, enterDelay }) {
 }
 
 // ── Difficulty screen ─────────────────────────────────────────────────────────
-export default function GameSelection({ onSelect, onViewLeaderboard }) {
+export default function GameSelection({ onSelect, onViewLeaderboard, onPassAndPlay, onLocalMulti }) {
   const containerRef = useRef(null);
   useScreenEntrance(containerRef);
 
   const [lbHovered, setLbHovered] = useState(false);
 
-  const handleSelect = (mode) => {
+  const handleSelect = useCallback((mode) => {
     playStart();
-    const config          = DIFFICULTY[mode];
+    const config           = DIFFICULTY[mode];
     const availableColours = COLOURS.slice(0, config.numColours);
     const secret = Array.from({ length: config.slots }, () =>
       availableColours[Math.floor(Math.random() * availableColours.length)].id
     );
     onSelect(mode, secret);
-  };
+  }, [onSelect]);
 
   // Global keyboard listener for Enter key (triggers Medium difficulty)
   useEffect(() => {
@@ -248,7 +248,7 @@ export default function GameSelection({ onSelect, onViewLeaderboard }) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onSelect]); // handleSelect closure depends on onSelect
+  }, [handleSelect]); // handleSelect is memoised via useCallback
 
   return (
     <div ref={containerRef} className="flex flex-col gap-10 w-full">
@@ -284,20 +284,52 @@ export default function GameSelection({ onSelect, onViewLeaderboard }) {
           Select a difficulty to begin
         </p>
 
-        {/* View High Scores */}
-        <button
-          onClick={() => { playActionClick(); onViewLeaderboard(); }}
-          onMouseEnter={() => { setLbHovered(true); playActionHover(); }}
-          onMouseLeave={() => setLbHovered(false)}
-          className="font-display text-sm tracking-[0.3em] font-bold uppercase px-12 py-4 transition-all duration-200 active:scale-95"
-          style={{
-            background:  lbHovered ? '#00f6ff' : '#00e3fd',
-            color:       '#002d33',
-            boxShadow:   lbHovered ? '0 0 30px rgba(0,227,253,0.5)' : '0 0 15px rgba(0,227,253,0.2)',
-          }}
-        >
-          ★ VIEW HIGH SCORES
-        </button>
+        <div className="flex flex-col md:flex-row items-center gap-4">
+          {/* View High Scores */}
+          <button
+            onClick={() => { playActionClick(); onViewLeaderboard(); }}
+            onMouseEnter={() => { setLbHovered(true); playActionHover(); }}
+            onMouseLeave={() => setLbHovered(false)}
+            className="font-display text-sm tracking-[0.3em] font-bold uppercase px-12 py-4 transition-all duration-200 active:scale-95"
+            style={{
+              background:  lbHovered ? '#00f6ff' : '#00e3fd',
+              color:       '#002d33',
+              boxShadow:   lbHovered ? '0 0 30px rgba(0,227,253,0.5)' : '0 0 15px rgba(0,227,253,0.2)',
+            }}
+          >
+            ★ VIEW HIGH SCORES
+          </button>
+
+          {/* Pass & Play */}
+          {onPassAndPlay && (
+            <button
+              onClick={() => { playActionClick(); onPassAndPlay(); }}
+              className="font-display text-sm tracking-[0.3em] font-bold uppercase px-12 py-4 transition-all duration-200 active:scale-95 border-2 hover:bg-[#ff51fa]/10"
+              style={{
+                borderColor: '#ff51fa',
+                color: '#ff51fa',
+                boxShadow: '0 0 15px rgba(255,81,250,0.2)',
+              }}
+            >
+              🤝 PASS & PLAY
+            </button>
+          )}
+
+          {/* Local Multiplayer (LAN) */}
+          {onLocalMulti && (
+            <button
+              onClick={() => { playActionClick(); onLocalMulti(); }}
+              className="font-display text-sm tracking-[0.3em] font-bold uppercase px-12 py-4 transition-all duration-200 active:scale-95 border-2 hover:bg-[#00e3fd]/10"
+              style={{
+                borderColor: '#00e3fd',
+                color: '#00e3fd',
+                boxShadow: '0 0 15px rgba(0,227,253,0.2)',
+              }}
+            >
+              📡 LOCAL MULTI
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,4 @@
 import { useSpring, useTrail, animated } from '@react-spring/web';
-import { COLOURS } from '../constants';
 
 export default function ColourPicker({ availableColours, onSelect, onClose }) {
   // Panel entrance spring

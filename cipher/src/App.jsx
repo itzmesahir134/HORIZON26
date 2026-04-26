@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { COLOURS, DIFFICULTY } from './constants';
+import { DIFFICULTY } from './constants';
 import { computeFeedback } from './utils/computeFeedback';
 import GameSelection from './components/GameSelection';
 import LandingScreen from './components/LandingScreen';
@@ -8,6 +8,17 @@ import TimerArc from './components/TimerArc';
 import WinScreen from './components/WinScreen';
 import LossScreen from './components/LossScreen';
 import Leaderboard from './components/Leaderboard';
+import PassAndPlayMaker from './components/PassAndPlayMaker';
+import PassAndPlayTransition from './components/PassAndPlayTransition';
+import PassAndPlayResult from './components/PassAndPlayResult';
+import PassAndPlayWinner from './components/PassAndPlayWinner';
+import LanSetup from './components/lan/LanSetup';
+import LanLobby from './components/lan/LanLobby';
+import LanDifficulty from './components/lan/LanDifficulty';
+import LanSecretMaker from './components/lan/LanSecretMaker';
+import LanBoard from './components/lan/LanBoard';
+import LanEndScreen from './components/lan/LanEndScreen';
+import { onMsg, disconnect } from './utils/lanSocket';
 import { saveScore } from './utils/leaderboardStore';
 import { toggleSoundtrack } from './utils/audio';
 
@@ -91,6 +102,28 @@ export default function App() {
     totalTime: 75,
     startTime: null,
     timeTaken: 0,
+    isPassAndPlay: false,
+    pnpRound: 1,
+    pnpSetter: 1,
+    pnpGuesser: 2,
+    pnpP1Stats: null,
+    pnpP2Stats: null,
+  });
+
+  // ── LAN Multiplayer state ────────────────────────────────────────────────
+  const [lanState, setLanState] = useState({
+    roomCode: null,
+    playerIndex: null,   // 0 = host, 1 = guest
+    lanIp: null,         // host's LAN IP (from server)
+    difficulty: null,
+    mySecret: null,
+    opponentSecret: null,
+    myGuesses: [],
+    myFeedbacks: [],
+    myResult: null,
+    myTime: null,
+    p1Stats: null,
+    p2Stats: null,
   });
 
   // ── Soundtrack Management ────────────────────────────────────────────────
@@ -103,6 +136,18 @@ export default function App() {
   }, [gameState.screen]);
 
   const handleDifficultySelect = (mode, secret) => {
+    if (gameState.screen === 'passAndPlayDifficulty') {
+      setGameState(prev => ({
+        ...prev,
+        difficulty: mode,
+        isPassAndPlay: true,
+        pnpRound: 1,
+        pnpSetter: 1,
+        pnpGuesser: 2,
+        screen: 'passAndPlayMaker',
+      }));
+      return;
+    }
     setGameState(prev => ({
       ...prev,
       difficulty: mode,
@@ -135,12 +180,27 @@ export default function App() {
       // Check win
       if (feedback.black === config.slots) {
         const timeTaken = (Date.now() - prev.startTime) / 1000;
-        return { ...prev, guesses: newGuesses, feedbacks: newFeedbacks, screen: 'won', timeTaken };
+        return { 
+          ...prev, 
+          guesses: newGuesses, 
+          feedbacks: newFeedbacks, 
+          screen: prev.isPassAndPlay ? 'passAndPlayResult' : 'won', 
+          timeTaken,
+          pnpWon: true 
+        };
       }
 
       // Check loss
       if (newGuesses.length >= config.maxGuesses) {
-        return { ...prev, guesses: newGuesses, feedbacks: newFeedbacks, screen: 'lost' };
+        const timeTaken = (Date.now() - prev.startTime) / 1000;
+        return { 
+          ...prev, 
+          guesses: newGuesses, 
+          feedbacks: newFeedbacks, 
+          screen: prev.isPassAndPlay ? 'passAndPlayResult' : 'lost',
+          timeTaken,
+          pnpWon: false
+        };
       }
 
       return {
@@ -153,7 +213,155 @@ export default function App() {
   };
 
   const handleTimeout = () => {
-    setGameState(prev => ({ ...prev, screen: 'lost' }));
+    setGameState(prev => ({ 
+      ...prev, 
+      screen: prev.isPassAndPlay ? 'passAndPlayResult' : 'lost',
+      timeTaken: (Date.now() - prev.startTime) / 1000,
+      pnpWon: false
+    }));
+  };
+
+  // ── Pass & Play handlers ──────────────────────────────────────────────────
+  const handlePassAndPlayStart = () => {
+    setGameState(prev => ({ ...prev, screen: 'passAndPlayDifficulty', isPassAndPlay: false }));
+  };
+
+  const handleCodeLocked = (secret) => {
+    setGameState(prev => ({ ...prev, secret, screen: 'passAndPlayTransition' }));
+  };
+
+  const handleTransitionReady = () => {
+    setGameState(prev => ({
+      ...prev,
+      currentGuess: Array(DIFFICULTY[prev.difficulty].slots).fill(null),
+      totalTime: DIFFICULTY[prev.difficulty].totalTime,
+      guesses: [],
+      feedbacks: [],
+      startTime: Date.now(),
+      screen: 'playing',
+    }));
+  };
+
+  // Called when a PnP round ends. Save the current guesser's stats, then route.
+  const handlePnpNextRound = () => {
+    // Round 1 just finished: Player 2 was guesser. Store P2 stats.
+    const guesserPlayer = gameState.pnpGuesser; // was 2
+    const currentStats = {
+      result: gameState.pnpWon ? 'win' : 'loss',
+      guesses: gameState.guesses.length,
+      timeTaken: gameState.timeTaken,
+      difficulty: gameState.difficulty,
+    };
+    const p1Stats = guesserPlayer === 1 ? currentStats : gameState.pnpP1Stats;
+    const p2Stats = guesserPlayer === 2 ? currentStats : gameState.pnpP2Stats;
+
+    setGameState(prev => ({
+      ...prev,
+      pnpRound: 2,
+      pnpSetter: prev.pnpGuesser,   // old guesser now sets
+      pnpGuesser: prev.pnpSetter,   // old setter now guesses
+      pnpP1Stats: p1Stats,
+      pnpP2Stats: p2Stats,
+      secret: [],
+      guesses: [],
+      feedbacks: [],
+      screen: 'passAndPlayMaker',
+    }));
+  };
+
+  const handlePnpShowWinner = () => {
+    // Round 2 just finished: save guesser stats
+    const guesserPlayer = gameState.pnpGuesser;
+    const currentStats = {
+      result: gameState.pnpWon ? 'win' : 'loss',
+      guesses: gameState.guesses.length,
+      timeTaken: gameState.timeTaken,
+      difficulty: gameState.difficulty,
+    };
+    const p1Stats = guesserPlayer === 1 ? currentStats : gameState.pnpP1Stats;
+    const p2Stats = guesserPlayer === 2 ? currentStats : gameState.pnpP2Stats;
+    setGameState(prev => ({ ...prev, pnpP1Stats: p1Stats, pnpP2Stats: p2Stats, screen: 'passAndPlayWinner' }));
+  };
+
+  const handlePnpHome = () => {
+    setGameState(prev => ({
+      ...prev,
+      screen: 'gameSelection',
+      isPassAndPlay: false,
+      pnpP1Stats: null,
+      pnpP2Stats: null,
+    }));
+  };
+
+  // ── LAN Multiplayer handlers ─────────────────────────────────────────────
+  const handleLanStart = () =>
+    setGameState(prev => ({ ...prev, screen: 'lanSetup' }));
+
+  const handleLanRoomCreated = (roomCode, lanIp) => {
+    setLanState(prev => ({ ...prev, roomCode, playerIndex: 0, lanIp }));
+    setGameState(prev => ({ ...prev, screen: 'lanLobby' }));
+  };
+
+  const handleLanRoomJoined = (roomCode) => {
+    setLanState(prev => ({ ...prev, roomCode, playerIndex: 1 }));
+    setGameState(prev => ({ ...prev, screen: 'lanLobby' }));
+  };
+
+  const handleLanBothConnected = () =>
+    setGameState(prev => ({ ...prev, screen: 'lanDifficulty' }));
+
+  // Guest also advances on difficulty_selected (handled in LanDifficulty itself)
+  const handleLanDifficultyConfirmed = (difficulty) => {
+    setLanState(prev => ({ ...prev, difficulty }));
+    setGameState(prev => ({ ...prev, screen: 'lanSecretMaker' }));
+  };
+
+  // game_start arrives from server via LanSecretMaker, passes secrets up
+  const handleLanGameStart = (mySecret, opponentSecret, difficulty) => {
+    setLanState(prev => ({ ...prev, mySecret, opponentSecret, difficulty }));
+    setGameState(prev => ({ ...prev, screen: 'lanPlaying' }));
+  };
+
+  // Called when local player finishes their round
+  const handleLanFinished = (result, guesses, feedbacks, timeTaken, mySecret, opponentSecret) => {
+    setLanState(prev => {
+      const myStats = { result, guesses: guesses.length, timeTaken, secret: mySecret };
+      const next = { ...prev, myResult: result, myGuesses: guesses, myFeedbacks: feedbacks, myTime: timeTaken };
+      if (next.playerIndex === 0) next.p1Stats = myStats;
+      else next.p2Stats = myStats;
+      return next;
+    });
+  };
+
+  // Listen for peer_finished from opponent
+  useEffect(() => {
+    const unsub = onMsg('peer_finished', (oppStats) => {
+      setLanState(prev => {
+        const next = { ...prev };
+        if (next.playerIndex === 0) next.p2Stats = oppStats;
+        else next.p1Stats = oppStats;
+        return next;
+      });
+    });
+    return unsub;
+  }, []);
+
+  // Check if both players are finished
+  useEffect(() => {
+    if (lanState.p1Stats && lanState.p2Stats && gameState.screen === 'lanPlaying') {
+      setTimeout(() => setGameState(prev => ({ ...prev, screen: 'lanEnd' })), 1000);
+    }
+  }, [lanState.p1Stats, lanState.p2Stats, gameState.screen]);
+
+  const handleLanDisconnect = () => {
+    disconnect();
+    setLanState({ roomCode: null, playerIndex: null, lanIp: null, difficulty: null, mySecret: null, opponentSecret: null, myGuesses: [], myFeedbacks: [], myResult: null, myTime: null, p1Stats: null, p2Stats: null });
+    setGameState(prev => ({ ...prev, screen: 'gameSelection' }));
+  };
+
+  const handleLanPlayAgain = () => {
+    setLanState(prev => ({ ...prev, mySecret: null, opponentSecret: null, myGuesses: [], myFeedbacks: [], myResult: null, myTime: null, p1Stats: null, p2Stats: null }));
+    setGameState(prev => ({ ...prev, screen: 'lanDifficulty' }));
   };
 
   if (gameState.screen === 'landing') {
@@ -201,15 +409,25 @@ export default function App() {
 
           {/* Screen router */}
           <main className="flex-1 flex flex-col justify-center w-full px-4 md:px-8 lg:px-12 pb-12 pt-6">
-            <div className="flex-1 overflow-hidden relative">
+            <div className="flex-1 overflow-hidden relative flex flex-col items-center w-full">
               {gameState.screen === 'gameSelection' && (
                 <GameSelection 
                   onSelect={handleDifficultySelect} 
                   onViewLeaderboard={() => setGameState(prev => ({ ...prev, screen: 'leaderboard' }))}
+                  onPassAndPlay={handlePassAndPlayStart}
+                  onLocalMulti={handleLanStart}
                 />
               )}
 
-              {(gameState.screen === 'playing' || gameState.screen === 'won' || gameState.screen === 'lost') && (
+              {gameState.screen === 'passAndPlayDifficulty' && (
+                <GameSelection
+                  onSelect={handleDifficultySelect}
+                  onViewLeaderboard={null}
+                  onPassAndPlay={null}
+                />
+              )}
+
+              {(gameState.screen === 'playing' || gameState.screen === 'won' || gameState.screen === 'lost' || gameState.screen === 'passAndPlayResult') && (
                 <GameBoard
                   difficulty={gameState.difficulty}
                   secret={gameState.secret}
@@ -242,6 +460,101 @@ export default function App() {
                 <LossScreen
                   gameState={gameState}
                   onPlayAgain={() => setGameState(prev => ({ ...prev, screen: 'gameSelection' }))}
+                />
+              )}
+
+              {gameState.screen === 'passAndPlayMaker' && (
+                <PassAndPlayMaker
+                  difficulty={gameState.difficulty}
+                  playerNumber={gameState.pnpSetter}
+                  onCodeLocked={handleCodeLocked}
+                />
+              )}
+
+              {gameState.screen === 'passAndPlayTransition' && (
+                <PassAndPlayTransition
+                  playerToPlay={gameState.pnpGuesser}
+                  onReady={handleTransitionReady}
+                />
+              )}
+
+              {gameState.screen === 'passAndPlayResult' && (
+                <PassAndPlayResult
+                  result={gameState.pnpWon ? 'win' : 'loss'}
+                  stats={{
+                    guesses: gameState.guesses.length,
+                    timeTaken: gameState.timeTaken,
+                    difficulty: gameState.difficulty,
+                  }}
+                  player={gameState.pnpGuesser}
+                  round={gameState.pnpRound}
+                  onNextRound={handlePnpNextRound}
+                  onShowOverallWinner={handlePnpShowWinner}
+                />
+              )}
+
+              {gameState.screen === 'passAndPlayWinner' && gameState.pnpP1Stats && gameState.pnpP2Stats && (
+                <PassAndPlayWinner
+                  p1Stats={gameState.pnpP1Stats}
+                  p2Stats={gameState.pnpP2Stats}
+                  onHome={handlePnpHome}
+                />
+              )}
+
+              {/* ── LAN Multiplayer screens ── */}
+              {gameState.screen === 'lanSetup' && (
+                <LanSetup
+                  onRoomCreated={handleLanRoomCreated}
+                  onRoomJoined={handleLanRoomJoined}
+                  onBack={() => setGameState(prev => ({ ...prev, screen: 'gameSelection' }))}
+                />
+              )}
+
+              {gameState.screen === 'lanLobby' && (
+                <LanLobby
+                  roomCode={lanState.roomCode}
+                  lanIp={lanState.lanIp}
+                  playerIndex={lanState.playerIndex}
+                  onBothConnected={handleLanBothConnected}
+                  onDisconnect={handleLanDisconnect}
+                />
+              )}
+
+              {gameState.screen === 'lanDifficulty' && (
+                <LanDifficulty
+                  playerIndex={lanState.playerIndex}
+                  onDifficultyConfirmed={handleLanDifficultyConfirmed}
+                  onDisconnect={handleLanDisconnect}
+                />
+              )}
+
+              {gameState.screen === 'lanSecretMaker' && (
+                <LanSecretMaker
+                  difficulty={lanState.difficulty}
+                  playerIndex={lanState.playerIndex}
+                  onGameStart={handleLanGameStart}
+                  onDisconnect={handleLanDisconnect}
+                />
+              )}
+
+              {gameState.screen === 'lanPlaying' && (
+                <LanBoard
+                  difficulty={lanState.difficulty}
+                  mySecret={lanState.mySecret}
+                  opponentSecret={lanState.opponentSecret}
+                  playerIndex={lanState.playerIndex}
+                  onFinished={handleLanFinished}
+                  onDisconnect={handleLanDisconnect}
+                />
+              )}
+
+              {gameState.screen === 'lanEnd' && lanState.p1Stats && lanState.p2Stats && (
+                <LanEndScreen
+                  playerIndex={lanState.playerIndex}
+                  p1Stats={lanState.p1Stats}
+                  p2Stats={lanState.p2Stats}
+                  onPlayAgain={handleLanPlayAgain}
+                  onEndSession={handleLanDisconnect}
                 />
               )}
             </div>

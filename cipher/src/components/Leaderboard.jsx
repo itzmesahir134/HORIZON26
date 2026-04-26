@@ -1,7 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useScreenEntrance } from '../hooks/useScreenEntrance';
 import { getScores } from '../utils/leaderboardStore';
-import { DIFFICULTY } from '../constants';
 import { playActionClick, playMenuHover, playMenuClick } from '../utils/audio';
 
 // ── Tab config ───────────────────────────────────────────────────────────────
