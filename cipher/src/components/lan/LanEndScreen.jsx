@@ -4,7 +4,7 @@ import gsap from 'gsap';
 import { useScreenEntrance } from '../../hooks/useScreenEntrance';
 import { COLOURS } from '../../constants';
 import { playActionClick, playActionHover, playSuccess, playError } from '../../utils/audio';
-import { onMsg, disconnect } from '../../utils/lanSocket';
+import { onMsg, sendMsg, disconnect } from '../../utils/lanSocket';
 
 function SecretReveal({ secret, label, accentColor }) {
   const colours = secret.map(id => COLOURS.find(c => c.id === id));
@@ -134,10 +134,28 @@ export default function LanEndScreen({ playerIndex, p1Stats, p2Stats, onPlayAgai
     else if (!isTie) playError();
   }, [iWon, isTie]);
 
+  const [selfReady, setSelfReady] = useState(false);
+  const [opponentReady, setOpponentReady] = useState(false);
+
   useEffect(() => {
-    const unsub = onMsg('opponent_disconnected', onEndSession);
-    return unsub;
+    const unsubPlay = onMsg('play_again_ready', () => setOpponentReady(true));
+    const unsubDisc = onMsg('opponent_disconnected', onEndSession);
+    return () => { unsubPlay(); unsubDisc(); };
   }, [onEndSession]);
+
+  useEffect(() => {
+    if (selfReady && opponentReady) {
+      const t = setTimeout(() => onPlayAgain(), 600);
+      return () => clearTimeout(t);
+    }
+  }, [selfReady, opponentReady, onPlayAgain]);
+
+  const handlePlayAgainClick = () => {
+    if (selfReady) return;
+    playActionClick();
+    setSelfReady(true);
+    sendMsg('play_again_ready', {});
+  };
 
   return (
     <div ref={containerRef} className="flex-1 flex flex-col items-center justify-center w-full max-w-2xl mx-auto gap-8 px-4">
@@ -180,11 +198,18 @@ export default function LanEndScreen({ playerIndex, p1Stats, p2Stats, onPlayAgai
       {/* Actions */}
       <div className="w-full flex flex-col md:flex-row gap-4">
         <button
-          onClick={() => { playActionClick(); onPlayAgain(); }}
+          onClick={handlePlayAgainClick}
           onMouseEnter={playActionHover}
-          className="flex-1 py-4 font-display text-sm tracking-[0.25em] uppercase font-bold border-2 border-[#8eff71]/40 text-[#8eff71] hover:bg-[#8eff71]/10 hover:border-[#8eff71] hover:shadow-[0_0_20px_rgba(142,255,113,0.3)] transition-all duration-200 active:scale-[0.98]"
+          className={`flex-1 py-4 font-display text-sm tracking-[0.25em] uppercase font-bold border-2 transition-all duration-200 active:scale-[0.98] ${
+            selfReady
+              ? 'border-[#8eff71] bg-[#8eff71]/10 text-[#8eff71] shadow-[0_0_20px_rgba(142,255,113,0.3)]'
+              : 'border-[#8eff71]/40 text-[#8eff71] hover:bg-[#8eff71]/10 hover:border-[#8eff71] hover:shadow-[0_0_20px_rgba(142,255,113,0.3)]'
+          }`}
         >
-          ↺ PLAY AGAIN
+          {selfReady && opponentReady ? '▶ LAUNCHING...'
+            : selfReady ? 'WAITING...'
+            : opponentReady ? 'OPPONENT READY - JOIN?'
+            : '↺ PLAY AGAIN'}
         </button>
         <button
           onClick={() => { playActionClick(); disconnect(); onEndSession(); }}
